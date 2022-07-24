@@ -10,7 +10,7 @@ metadata:
   namespace: examplens # Название неймспейса где это будет находиться
 spec:
   affinity:
-    podAntiAffinity:
+    podAntiAffinity: #Данный пункт нужен для того, чтобы расположить поды на разных нодах. Т.е в случае отказа одной ноды с подом, другие поды будут работать исправно
       requiredDuringSchedulingIgnoredDuringExecution:  #Под не будет запланирован на занятой ноде, тем самым, в случае отказа одной ноды будет задействована другая
       - labelSelector:
               matchExpressions:
