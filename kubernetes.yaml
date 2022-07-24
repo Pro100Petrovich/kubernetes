@@ -1,0 +1,59 @@
+# Опирался на книгу Kubernetes для DevOps
+# Также опирался на официальную документацию, форум stackoverflow
+# При поиске решений в начале очень много опирался на книгу, т.к еще с первого раза запомнил много деталей и где их искать.
+# В том случае если в книге не раскрыта была та или иная тема обращался к документации и гуглу. Т.к например в книге было не описано про assign pod to node.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test #Название деплоймента
+  namespace: examplens # Название неймспейса где это будет находиться
+spec:
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:  #Под не будет запланирован на занятой ноде, тем самым, в случае отказа одной ноды будет задействована другая
+      - labelSelector:
+              matchExpressions:
+              - key: "app"
+                operator: In
+                values:
+                - debian
+        topologyKey: "kubernetes.io/hostname"
+  replicas: 5 #4 подов хватит, но лучше подстроховаться и взять еще один под на случай сбоя
+  minAvailable: 4  #Для нормальной работы требуется работа 4 подов
+  selector:
+    matchLabels:
+      app: example
+  template:  #label чтобы было легче найти Pod deployment'у
+    metadata:
+      name: test
+      namespace: examplens
+      labels:
+        app: example
+    spec:
+      containers:
+        - name: test
+          image: 'hello world'
+          ports:
+            - containerPort: 8888
+          volumeMounts:  #Сохраним данные из директории '/usr' контейнера (Чтобы не потерять данные, сделанные во время работы), для этого делаем точку монтирования
+            - mountPath: /usr
+              name: example
+          resources:  #Работаем с ресурсами
+            requests: #Говорим, что для работы с подом требуется по умолчанию следующие ресурсы
+              memory: "128Mi"
+              cpu: "0.1CPU"
+            limits: #Нам известно, что памяти всегда потребляется одно и тоже число, следовательно ограничем ее
+                memory: "128Mi"
+          readinessProbe: 
+            httpGet: #Будем использовать для проверки http-get ответа в случае отрицательного ответа
+              path: /healthz
+              port: 8888
+            minReadySeconds: 5  #Минимум требуется 5 секунд для инициализации
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: example
+          hostPath: #Место на рабочем компьютере куда мы сможем сохранять данные из контейнера. Либо можем прокидывать их Внутрь контейнера
+            path: /home/user/from-container
+            type: Directory
